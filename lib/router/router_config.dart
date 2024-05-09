@@ -11,6 +11,7 @@ class AppRouterConfig {
       name: RouterConstant.home,
       path: '/',
       pageBuilder: (context, state) {
+     
         return MaterialPage(child: Home());
       },
     ),
@@ -25,7 +26,9 @@ class AppRouterConfig {
       name: RouterConstant.category,
       path: '/category',
       pageBuilder: (context, state) {
-        return MaterialPage(child: Category());
+           final data=state.extra as Map<String,dynamic>;
+           print("lllll ${data}");
+        return MaterialPage(child: Category(item: data,));
       },
     )
   ]);
