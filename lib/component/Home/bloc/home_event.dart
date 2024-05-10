@@ -5,8 +5,14 @@ sealed class HomeEvent {}
 
 class HomeInitialEvent extends HomeEvent {
   final String category;
-  final String pageSize;
-  HomeInitialEvent(this.category,this.pageSize);
+  
+  HomeInitialEvent(this.category);
+ 
+}
+class HomeSearchEvent extends HomeEvent {
+  final String query;
+  
+  HomeSearchEvent(this.query);
  
 }
 class  HomeAddPageSizeEvent extends HomeEvent{}

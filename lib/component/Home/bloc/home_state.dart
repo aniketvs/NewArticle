@@ -15,5 +15,8 @@ final class HomeInitial extends HomeState {}
 final class HomeSuccessState extends HomeState {
   HomeSuccessState({required super.articles});
 }
+final class HomeSearchLoadingState extends HomeState{
+  HomeSearchLoadingState({required super.articles});
+}
 
 final class HomeErrorState extends HomeActionState {}

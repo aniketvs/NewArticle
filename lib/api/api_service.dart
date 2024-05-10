@@ -82,4 +82,15 @@ class ApiService {
   
     return NewsArticleModel.fromJson(response.data);
   }
+   static Future<NewsArticleModel> getSearchData(param) async {
+    final response = await getRequest(endpoint: Endpoints.searchApi, param: param);
+    print("kkkkkkkkkkk $response");
+    if (response.statusCode != 200) {
+    dynamic data = jsonDecode(response.data.toString());
+      throw data['message'];
+    }
+    print("::::::::::: $response");
+  
+    return NewsArticleModel.fromJson(response.data);
+  }
 }
