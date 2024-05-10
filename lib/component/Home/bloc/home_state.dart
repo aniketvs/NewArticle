@@ -12,12 +12,6 @@ sealed class HomeActionState extends HomeState {
 
 final class HomeInitial extends HomeState {}
 
-final class HomeLoadingState extends HomeState {
-  HomeLoadingState({required super.articles});
-}
-final class HomeLoadingMoreDataState extends HomeState{
-  HomeLoadingMoreDataState({required super.articles});
-}
 final class HomeSuccessState extends HomeState {
   HomeSuccessState({required super.articles});
 }

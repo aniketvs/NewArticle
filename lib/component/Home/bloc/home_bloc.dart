@@ -10,6 +10,7 @@ part 'home_state.dart';
 
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
   String _page="1";
+  
   String get page => _page;
   HomeBloc() : super(HomeInitial()) {
     on<HomeInitialEvent>(_homeInitialEvent);
@@ -18,25 +19,24 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
   FutureOr<void> _homeInitialEvent(
       HomeInitialEvent event, Emitter<HomeState> emit) async {
-        if(page ==1){
-    emit(HomeLoadingState(articles: []));
-        }else{
-          emit(HomeLoadingMoreDataState(articles:state.articles));
-        }
+   
     Map<String, dynamic> param = {
-      "category": event.category.toLowerCase(),
-      "pageSize": "10",
+      "category": event.category.toLowerCase() == "top headlines" ? "" : event.category.toLowerCase(),
+      "pageSize": "15",
       "page":page,
       "country": "in",
       "apiKey": "c3d4857daefe40a7b8c1791977da161c"
     };
     NewsArticleModel res = await ArticleRepoSitory.getNewsArticle(param);
     if (res.status == "ok" && res.totalResults! > 0) {
-      state.articles?.addAll(res.articles ?? []);
-      emit(HomeSuccessState(articles:state.articles));
+     List<Articlesmodle> article=state.articles ?? [];
+     article.addAll(res.articles!);
+  
+      emit(HomeSuccessState(articles:article));
     } else {
       emit(HomeErrorState());
     }
+    print("bloc ${state.articles}");
   }
 
   FutureOr<void> _homePageSizeEvent(HomeAddPageSizeEvent event, Emitter<HomeState> emit) {

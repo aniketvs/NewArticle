@@ -1,14 +1,20 @@
+import 'dart:convert';
+import 'dart:ffi';
+
 import 'package:ezar/component/Home/bloc/home_bloc.dart';
+import 'package:ezar/model/news_article_model.dart';
 import 'package:ezar/router/router_constant.dart';
 import 'package:ezar/utils/app_colors.dart';
 import 'package:ezar/utils/app_styles.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get_utils/src/extensions/widget_extensions.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Category extends StatefulWidget {
   dynamic item;
@@ -19,14 +25,63 @@ class Category extends StatefulWidget {
 }
 
 class _CategoryState extends State<Category> with TickerProviderStateMixin {
-  PageController pageController = PageController();
+  ScrollController controller = ScrollController();
   HomeBloc homeBloc = HomeBloc();
+  List<String> list = [];
+   List<String> jsonArray =[];
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
+    loadData();
     print("kkkkkkkk ${widget.item['name']}");
     homeBloc.add(HomeInitialEvent(widget.item['name'], "10"));
+    controller.addListener(() {
+      print("hrlllo");
+      if (controller.position.maxScrollExtent == controller.offset) {
+        homeBloc.add(HomeInitialEvent(widget.item['name'], "10"));
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    controller.dispose();
+    super.dispose();
+  }
+
+  loadData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> indexList = await prefs.getStringList("index") ?? [];
+    jsonArray= prefs.getStringList('newsArticle') ?? [];
+    print("========== $indexList");
+    setState(() {
+      list = indexList;
+    });
+  }
+
+  Future<void> _storeData(Articlesmodle jsonData, index) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    jsonArray= prefs.getStringList('newsArticle') ?? [];
+    List<String> indexList = prefs.getStringList("index") ?? [];
+    String jsonString = jsonEncode(jsonData);
+    if (jsonArray.contains(jsonString)) {
+      jsonArray.remove(jsonString);
+      indexList.remove(index.toString());
+      await prefs.setStringList('newsArticle', jsonArray);
+      await prefs.setStringList("index", indexList);
+    } else {
+      jsonArray.add(jsonString);
+      indexList.add(index.toString());
+      await prefs.setStringList('newsArticle', jsonArray);
+      await prefs.setStringList("index", indexList);
+    }
+    
+    setState(() {
+      
+    });
   }
 
   @override
@@ -44,45 +99,106 @@ class _CategoryState extends State<Category> with TickerProviderStateMixin {
       },
       builder: (context, state) {
         return Scaffold(
-          appBar: AppStyles.commonAppbar(context, "Category", showLeading: true,
-              leadingOnPressed: () {
-            GoRouter.of(context).goNamed(RouterConstant.home);
-          }),
-          body: state.runtimeType == HomeSuccessState
-              ? SafeArea(
-                  child: Column(
-                    children: [
-                      Container(
-                        height: MediaQuery.of(context).size.height * 1,
-                        width: MediaQuery.of(context).size.width * 1,
-                        child: PageView.builder(
-                            controller: pageController,
-                            scrollDirection: Axis.vertical,
-                  
-                            onPageChanged: (value) {
-                              if (value > (int.parse(homeBloc.page) * 10)) {
-                                homeBloc.add(HomeAddPageSizeEvent());
-                                homeBloc.add(HomeInitialEvent(
-                                    widget.item['name'], homeBloc.page));
-                              }
+            appBar: AppStyles.commonAppbar(context, "Category",
+                showLeading: true, leadingOnPressed: () {
+              GoRouter.of(context).goNamed(RouterConstant.home);
+            }),
+            body: state.runtimeType != HomeSuccessState
+                ? Center(
+                    child: CircularProgressIndicator(),
+                  )
+                : SafeArea(
+                    child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Padding(
+                          padding:  EdgeInsets.symmetric(horizontal: 12.w),
+                          child: TextField(
+                            onChanged: (value) {
+                              print(value);
                             },
-                            itemCount: state.articles?.length,
-                            itemBuilder: (context, index) {
-                              String url = state.articles?[index].urlToImage ??
-                                  defaultUrl;
-                              return Text("hello",style: AppStyles.white16bold,);
-                            }),
-                      ).marginOnly(top: 20.h),
-                      state.runtimeType == HomeLoadingMoreDataState
-                          ? Center(
-                              child: CircularProgressIndicator(
-                              backgroundColor: AppColors.secondaryColorLight,
-                            ))
-                          : SizedBox.shrink()
-                    ],
-                  ))
-              : Center(child: CircularProgressIndicator()),
-        );
+                            style: AppStyles.white14regular,
+                            decoration: InputDecoration(labelText: "Search",suffixIcon: Icon(Icons.search)),
+                          ),
+                        ),
+                        SizedBox(height: 10.h,),
+                        Container(
+                            height: MediaQuery.of(context).size.height * 1,
+                            width: MediaQuery.of(context).size.width * 1,
+                            child: ListView.builder(
+                                controller: controller,
+                                itemCount: state.articles!.length + 1,
+                                itemBuilder: (context, index) {
+                                  if (index < state.articles!.length) {
+                                    String url =
+                                        state.articles?[index].urlToImage ??
+                                            defaultUrl;
+                                    int cutLen =0;
+                                    if(state.articles?[index].description != null){
+                                  cutLen=   state.articles![index].description!
+                                                .length >=
+                                            50
+                                        ? 50
+                                        : state
+                                            .articles![index].description!.length;
+                                    }
+                                    return GestureDetector(
+                                      onTap: () {
+                                        GoRouter.of(context).pushNamed(
+                                            RouterConstant.article,
+                                            extra: state.articles![index]);
+                                      },
+                                      child: ListTile(
+                                        leading: Image.network(
+                                          url,
+                                          width: 60.w,
+                                          height: 60.h,
+                                        ),
+                                        title: Text(
+                                          state.articles![index].title
+                                                  .toString()
+                                                  .substring(0, 30) +
+                                              '....',
+                                          style: AppStyles.white16bold,
+                                        ),
+                                        subtitle: Text(
+                                          "${state.articles?[index].description.toString().substring(0, cutLen)} ${cutLen < 50 ? "" : "...."}",
+                                          style: AppStyles.white14regular,
+                                        ),
+                                        trailing: GestureDetector(
+                                            onTap: () {
+                                              setState(() {
+                                                if (list
+                                                    .contains(index.toString())) {
+                                                  list.remove(index.toString());
+                                                   _storeData(state.articles![index],
+                                                      index);
+                                                } else {
+                                                  list.add(index.toString());
+                                                  _storeData(state.articles![index],
+                                                      index);
+                                                }
+                                              });
+                                            },
+                                            child: list.contains(index.toString()) && jsonArray.contains(jsonEncode(state.articles![index]))
+                                                ? Icon(
+                                                    Icons.bookmark,
+                                                  )
+                                                : Icon(
+                                                    Icons.bookmark_add_outlined)),
+                                      ),
+                                    );
+                                  } else {
+                                    return Center(
+                                      child: CircularProgressIndicator(),
+                                    );
+                                  }
+                                })),
+                      ],
+                    ),
+                  )));
       },
     );
   }
